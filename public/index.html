@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QA Dashboard — Shopee VN</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#F8FAFC;--surface:#fff;--border:#E2E8F0;
+  --blue:#2563EB;--blue-light:#EFF6FF;--blue-mid:#DBEAFE;
+  --green:#059669;--green-bg:#ECFDF5;
+  --red:#DC2626;--red-bg:#FEF2F2;
+  --orange:#D97706;--orange-bg:#FFFBEB;
+  --text:#0F172A;--text2:#475569;--text3:#94A3B8;
+  --sidebar-w:220px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);font-size:13px;display:flex;height:100vh;overflow:hidden}
+
+/* SIDEBAR */
+#sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.logo{padding:16px;border-bottom:1px solid var(--border)}
+.logo h1{font-size:14px;font-weight:800;color:var(--blue)}
+.logo p{font-size:11px;color:var(--text3);margin-top:2px}
+nav{flex:1;padding:8px 0;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 16px;font-size:12.5px;color:var(--text2);cursor:pointer;border-left:3px solid transparent;transition:.15s;user-select:none}
+.nav-item:hover{background:var(--blue-light);color:var(--blue)}
+.nav-item.active{background:var(--blue-light);color:var(--blue);border-left-color:var(--blue);font-weight:700}
+.nav-item.hidden{display:none}
+.nav-icon{font-size:14px;width:18px;text-align:center;flex-shrink:0}
+.sidebar-bottom{padding:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
+.btn-primary{background:var(--blue);color:#fff;border:none;border-radius:7px;padding:7px 12px;font-size:11.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;width:100%}
+.btn-primary:hover{background:#1D4ED8}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-outline{background:transparent;color:var(--text2);border:1px solid var(--border);border-radius:7px;padding:7px 12px;font-size:11.5px;cursor:pointer;display:flex;align-items:center;gap:6px;width:100%}
+.btn-outline:hover{background:var(--bg)}
+
+/* MAIN */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* FILTER BAR */
+#filterBar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0}
+.module-pills{display:flex;gap:4px}
+.pill{padding:4px 12px;border-radius:20px;font-size:11.5px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:transparent;color:var(--text2);transition:.15s}
+.pill:hover{border-color:var(--blue);color:var(--blue)}
+.pill.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.view-toggle{display:flex;background:#F1F5F9;border-radius:8px;padding:2px}
+.view-btn{padding:4px 12px;font-size:11.5px;font-weight:600;border:none;background:transparent;cursor:pointer;border-radius:6px;color:var(--text2);transition:.15s}
+.view-btn.active{background:var(--surface);color:var(--blue);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.filter-sep{width:1px;height:20px;background:var(--border);flex-shrink:0}
+.filter-label{font-size:11.5px;color:var(--text2);display:flex;align-items:center;gap:5px}
+.filter-label select,.filter-label input[type=number]{border:1px solid var(--border);border-radius:5px;padding:3px 6px;font-size:11.5px;color:var(--text);background:var(--surface)}
+.filter-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.target-input{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--text2)}
+.target-input input{width:52px;border:1px solid var(--border);border-radius:5px;padding:3px 6px;text-align:center;font-size:11.5px}
+.last-updated{font-size:10.5px;color:var(--text3)}
+
+/* CONTENT */
+#content{flex:1;overflow-y:auto;padding:20px 24px}
+.page{display:none}.page.active{display:block}
+
+/* PAGE HEADER */
+.page-header{margin-bottom:18px}
+.page-header h2{font-size:17px;font-weight:800;color:var(--text)}
+.page-header p{font-size:12px;color:var(--text3);margin-top:2px}
+
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.kpi-label{font-size:10.5px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.kpi-value{font-size:22px;font-weight:800;line-height:1}
+.kpi-sub{font-size:10.5px;color:var(--text3);margin-top:4px}
+.kpi-green{color:var(--green)}.kpi-red{color:var(--red)}.kpi-blue{color:var(--blue)}.kpi-orange{color:var(--orange)}
+
+/* CHARTS */
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px}
+.chart-card.full{grid-column:1/-1}
+.chart-title{font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:12px}
+.chart-wrap{position:relative;height:220px}
+
+/* TABLE */
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px}
+.table-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.table-header-title{font-size:12.5px;font-weight:700;color:var(--text)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#F8FAFC;padding:8px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border)}
+td{padding:7px 14px;border-bottom:1px solid var(--border);color:var(--text2)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#FAFBFC}
+.badge-good{background:var(--green-bg);color:var(--green);padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap}
+.badge-bad{background:var(--red-bg);color:var(--red);padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap}
+.badge-warn{background:var(--orange-bg);color:var(--orange);padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700}
+
+/* TABS */
+.tab-bar{display:flex;border-bottom:1px solid var(--border);margin-bottom:14px;gap:0}
+.tab-btn{padding:8px 16px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;transition:.15s}
+.tab-btn:hover{color:var(--blue)}
+.tab-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab-pane{display:none}.tab-pane.active{display:block}
+
+/* LOADING */
+.loading{display:flex;align-items:center;justify-content:center;height:200px;color:var(--text3);font-size:13px}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;margin-right:10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* AI PANEL */
+.ai-panel{background:linear-gradient(135deg,#EFF6FF,#F5F3FF);border:1px solid #C7D2FE;border-radius:10px;padding:14px 16px;margin-top:14px}
+.ai-panel-title{font-size:12px;font-weight:800;color:#3730A3;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.ai-body{font-size:12px;color:#3730A3;line-height:1.6}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+  <div class="logo">
+    <h1>📊 QA Dashboard</h1>
+    <p>Shopee VN Quality Report</p>
+  </div>
+  <nav id="nav">
+    <div class="nav-item active" data-page="overview">    <span class="nav-icon">🏠</span>Overview</div>
+    <div class="nav-item" data-page="qa-score">           <span class="nav-icon">📈</span>QA Score</div>
+    <div class="nav-item" data-page="appeal" id="nav-appeal"><span class="nav-icon">⚖️</span>Appeal</div>
+    <div class="nav-item" data-page="leakage">            <span class="nav-icon">🔍</span>Leakage / Overkill</div>
+    <div class="nav-item" data-page="agent-perf">         <span class="nav-icon">👤</span>Agent Performance</div>
+  </nav>
+  <div class="sidebar-bottom" id="sidebarBottom">
+    <button class="btn-primary" id="btnRefresh" onclick="refreshData()">
+      <span id="refreshIcon">🔄</span> Refresh Data
+    </button>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div id="main">
+  <!-- FILTER BAR -->
+  <div id="filterBar">
+    <div class="module-pills" id="modulePills">
+      <button class="pill active" data-module="All">All</button>
+      <button class="pill" data-module="Video">Video</button>
+      <button class="pill" data-module="Listing">Listing</button>
+      <button class="pill" data-module="Livestream">Livestream</button>
+      <button class="pill" data-module="Chat">Chat</button>
+    </div>
+    <div class="filter-sep"></div>
+    <div class="view-toggle">
+      <button class="view-btn active" data-view="Weekly">Weekly</button>
+      <button class="view-btn" data-view="Monthly">Monthly</button>
+    </div>
+    <div class="filter-sep"></div>
+    <div class="filter-label">
+      W <select id="weekStart"></select> → <select id="weekEnd"></select>
+    </div>
+    <div class="filter-right">
+      <div class="target-input">
+        QA Target <input type="number" id="qaTarget" value="95" min="0" max="100"> %
+      </div>
+      <div class="target-input" id="appealTargetWrap" style="display:none">
+        Appeal ≤ <input type="number" id="appealTarget" value="5" min="0" max="100"> %
+      </div>
+      <span class="last-updated" id="lastUpdated"></span>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- ═══ PAGE: OVERVIEW ═══ -->
+    <div class="page active" id="page-overview">
+      <div class="page-header">
+        <h2>Overview</h2>
+        <p id="overviewSubtitle">Tổng quan KPI toàn bộ modules</p>
+      </div>
+      <div class="kpi-grid" id="overviewKPIs">
+        <div class="loading"><div class="spinner"></div>Đang tải...</div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-card full">
+          <div class="chart-title">QA Score Trend by Module</div>
+          <div class="chart-wrap"><canvas id="chartOverviewTrend"></canvas></div>
+        </div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-card">
+          <div class="chart-title">Sample Distribution by Module</div>
+          <div class="chart-wrap"><canvas id="chartOverviewPie"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Error Rate by Module</div>
+          <div class="chart-wrap"><canvas id="chartOverviewErrors"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: QA SCORE ═══ -->
+    <div class="page" id="page-qa-score">
+      <div class="page-header">
+        <h2>QA Score</h2>
+        <p>Chi tiết điểm QA theo module và agent</p>
+      </div>
+      <div class="kpi-grid" id="qaKPIs"></div>
+      <div class="chart-row">
+        <div class="chart-card full">
+          <div class="chart-title">QA Score theo tuần — All Agents (avg)</div>
+          <div class="chart-wrap"><canvas id="chartQATrend"></canvas></div>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <span class="table-header-title">Agent QA Score Summary</span>
+          <span id="qaAgentCount" style="font-size:11px;color:var(--text3)"></span>
+        </div>
+        <div style="overflow-x:auto;max-height:380px;overflow-y:auto">
+          <table id="tableQA">
+            <thead><tr><th>#</th><th>Agent</th><th>Module</th><th>Sub-Module</th><th>QA Score</th><th>Sample</th><th>Errors</th><th>Probation</th><th>Status</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: APPEAL ═══ -->
+    <div class="page" id="page-appeal">
+      <div class="page-header">
+        <h2>Appeal</h2>
+        <p>Chỉ hiển thị khi module là Livestream hoặc Video</p>
+      </div>
+      <div class="kpi-grid" id="appealKPIs"></div>
+      <div class="chart-row">
+        <div class="chart-card full">
+          <div class="chart-title">Appeal Rate Trend (thấp hơn = tốt hơn)</div>
+          <div class="chart-wrap"><canvas id="chartAppealTrend"></canvas></div>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-header"><span class="table-header-title">Appeal Detail</span></div>
+        <div style="overflow-x:auto">
+          <table id="tableAppeal">
+            <thead><tr><th>Week/Month</th><th>Module</th><th>Type</th><th>Total</th><th>Success</th><th>Rate</th><th>vs Target</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: LEAKAGE ═══ -->
+    <div class="page" id="page-leakage">
+      <div class="page-header">
+        <h2>Leakage / Overkill</h2>
+        <p>Tỷ lệ lọt và overkill theo module</p>
+      </div>
+      <div class="kpi-grid" id="leakageKPIs"></div>
+      <div class="chart-row">
+        <div class="chart-card">
+          <div class="chart-title">Leakage Rate Trend</div>
+          <div class="chart-wrap"><canvas id="chartLeakage"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Overkill Rate Trend</div>
+          <div class="chart-wrap"><canvas id="chartOverkill"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: AGENT PERFORMANCE ═══ -->
+    <div class="page" id="page-agent-perf">
+      <div class="page-header">
+        <h2>Agent Performance</h2>
+        <p>Phân tích hiệu suất cá nhân</p>
+      </div>
+      <div class="tab-bar" id="agentTabs">
+        <button class="tab-btn active" data-tab="ranking">Best / Worst</button>
+        <button class="tab-btn" data-tab="distribution">Distribution</button>
+        <button class="tab-btn" id="probationTabBtn" data-tab="probation">Probation</button>
+      </div>
+      <div class="tab-pane active" id="tab-ranking">
+        <div class="kpi-grid" id="agentKPIs"></div>
+        <div class="table-card">
+          <div class="table-header">
+            <span class="table-header-title">Agent Ranking</span>
+            <span id="agentRankCount" style="font-size:11px;color:var(--text3)"></span>
+          </div>
+          <div style="overflow-x:auto;max-height:400px;overflow-y:auto">
+            <table id="tableAgentRank">
+              <thead><tr><th>#</th><th>Agent</th><th>Module</th><th>QA Score</th><th>Sample</th><th>Errors</th><th>Status</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="tab-pane" id="tab-distribution">
+        <div class="chart-card">
+          <div class="chart-title">Score Distribution</div>
+          <div class="chart-wrap"><canvas id="chartDistribution"></canvas></div>
+        </div>
+      </div>
+      <div class="tab-pane" id="tab-probation">
+        <div class="table-card">
+          <div class="table-header">
+            <span class="table-header-title">⚠️ Probation Agents</span>
+            <span id="probationCount" style="font-size:11px;color:var(--text3)"></span>
+          </div>
+          <div style="overflow-x:auto">
+            <table id="tableProbation">
+              <thead><tr><th>#</th><th>Agent</th><th>Module</th><th>QA Score</th><th>Sample</th><th>Weeks on Probation</th><th>Status</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+const state = {
+  module: 'All',
+  viewMode: 'Weekly',
+  weekStart: 18, weekEnd: 22,
+  monthStart: 1, monthEnd: 12,
+  qaTarget: 95,
+  appealTarget: 5,
+  activePage: 'overview',
+  data: null,
+  charts: {},
+};
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  buildWeekSelects();
+  bindNav();
+  bindFilters();
+  fetchData();
+});
+
+function buildWeekSelects() {
+  const ws = document.getElementById('weekStart');
+  const we = document.getElementById('weekEnd');
+  for (let i = 1; i <= 52; i++) {
+    ws.innerHTML += `<option value="${i}" ${i===18?'selected':''}>${i}</option>`;
+    we.innerHTML += `<option value="${i}" ${i===22?'selected':''}>${i}</option>`;
+  }
+  ws.addEventListener('change', e => { state.weekStart = +e.target.value; render(); });
+  we.addEventListener('change', e => { state.weekEnd = +e.target.value; render(); });
+}
+
+// ══════════════════════════════════════════
+// DATA FETCH
+// ══════════════════════════════════════════
+async function fetchData(force = false) {
+  try {
+    document.getElementById('btnRefresh').disabled = true;
+    document.getElementById('refreshIcon').textContent = '⏳';
+    const url = `/api/data${force ? '?refresh=true' : ''}`;
+    const res = await fetch(url);
+    state.data = await res.json();
+    document.getElementById('lastUpdated').textContent =
+      '🕐 ' + new Date(state.data.meta.fetchedAt).toLocaleTimeString('vi-VN');
+    render();
+  } catch(e) {
+    console.error(e);
+    document.getElementById('lastUpdated').textContent = '❌ Load failed';
+  } finally {
+    document.getElementById('btnRefresh').disabled = false;
+    document.getElementById('refreshIcon').textContent = '🔄';
+  }
+}
+
+async function refreshData() { await fetchData(true); }
+
+// ══════════════════════════════════════════
+// FILTER HELPERS
+// ══════════════════════════════════════════
+function getFilteredWeekly() {
+  if (!state.data) return [];
+  return state.data.qaWeekly.filter(r => {
+    const modMatch = state.module === 'All' || r.module === state.module;
+    const wkMatch  = r.week >= state.weekStart && r.week <= state.weekEnd;
+    return modMatch && wkMatch;
+  });
+}
+
+function getFilteredMonthly() {
+  if (!state.data) return [];
+  return state.data.qaMonthly.filter(r => {
+    const modMatch = state.module === 'All' || r.module === state.module;
+    const mMatch   = r.month >= state.monthStart && r.month <= state.monthEnd;
+    return modMatch && mMatch;
+  });
+}
+
+function getFilteredRecords() {
+  return state.viewMode === 'Weekly' ? getFilteredWeekly() : getFilteredMonthly();
+}
+
+function getFilteredAppeal() {
+  if (!state.data) return [];
+  return state.data.appeal.filter(r =>
+    state.module === 'All' || r.module === state.module
+  );
+}
+
+function getFilteredLeakage() {
+  if (!state.data) return [];
+  return state.data.leakage.filter(r => {
+    const modMatch  = state.module === 'All' || r.module === state.module;
+    const modeMatch = state.viewMode === 'Weekly' ? r.mode === 'weekly' : r.mode === 'monthly';
+    return modMatch && modeMatch;
+  });
+}
+
+function getColor(v, t, inv = false) {
+  const good = inv ? v <= t : v >= t;
+  return good ? 'var(--green)' : 'var(--red)';
+}
+
+// ══════════════════════════════════════════
+// RENDER DISPATCH
+// ══════════════════════════════════════════
+function render() {
+  updateAppealVisibility();
+  updateProbationVisibility();
+  const p = state.activePage;
+  if (p === 'overview')    renderOverview();
+  if (p === 'qa-score')    renderQAScore();
+  if (p === 'appeal')      renderAppeal();
+  if (p === 'leakage')     renderLeakage();
+  if (p === 'agent-perf')  renderAgentPerf();
+}
+
+// ══════════════════════════════════════════
+// APPEAL VISIBILITY (key business logic)
+// ══════════════════════════════════════════
+function isAppealVisible() {
+  return ['Livestream', 'Video'].includes(state.module);
+}
+
+function updateAppealVisibility() {
+  const navAppeal = document.getElementById('nav-appeal');
+  const atWrap    = document.getElementById('appealTargetWrap');
+  if (isAppealVisible()) {
+    navAppeal.classList.remove('hidden');
+    atWrap.style.display = 'flex';
+  } else {
+    navAppeal.classList.add('hidden');
+    atWrap.style.display = 'none';
+    if (state.activePage === 'appeal') {
+      switchPage('overview');
+    }
+  }
+}
+
+// ══════════════════════════════════════════
+// PROBATION VISIBILITY (key business logic)
+// ══════════════════════════════════════════
+function updateProbationVisibility() {
+  const btn = document.getElementById('probationTabBtn');
+  if (state.viewMode === 'Monthly') {
+    btn.style.display = 'none';
+    // Unmount: switch away nếu đang ở probation tab
+    const activeTab = document.querySelector('.tab-pane.active');
+    if (activeTab && activeTab.id === 'tab-probation') {
+      switchTab('ranking');
+    }
+  } else {
+    btn.style.display = '';
+  }
+}
+
+// ══════════════════════════════════════════
+// CHART HELPER
+// ══════════════════════════════════════════
+function makeChart(id, config) {
+  if (state.charts[id]) state.charts[id].destroy();
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  state.charts[id] = new Chart(ctx, config);
+}
+
+const COLORS = ['#2563EB','#059669','#D97706','#DC2626','#7C3AED','#0891B2','#BE185D'];
+const MODULES_COLOR = { Video: '#2563EB', Listing: '#059669', Livestream: '#D97706', Chat: '#7C3AED' };
+
+// ══════════════════════════════════════════
+// OVERVIEW PAGE
+// ══════════════════════════════════════════
+function renderOverview() {
+  const records = getFilteredRecords();
+  if (!records.length) { document.getElementById('overviewKPIs').innerHTML = '<div class="loading">Không có dữ liệu</div>'; return; }
+
+  const totalSample   = records.reduce((a,r) => a + r.qaSample, 0);
+  const totalAccurate = records.reduce((a,r) => a + r.accurate, 0);
+  const totalErrors   = records.reduce((a,r) => a + r.errors, 0);
+  const avgScore      = totalSample > 0 ? (totalAccurate / totalSample * 100).toFixed(1) : 0;
+  const agents        = [...new Set(records.map(r => r.agentEmail))].length;
+  const color         = avgScore >= state.qaTarget ? 'kpi-green' : 'kpi-red';
+
+  document.getElementById('overviewKPIs').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Avg QA Score</div>
+      <div class="kpi-value ${color}">${avgScore}%</div>
+      <div class="kpi-sub">Target: ${state.qaTarget}%</div></div>
+    <div class="kpi-card"><div class="kpi-label">Total QA Sample</div>
+      <div class="kpi-value kpi-blue">${totalSample.toLocaleString()}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Total Errors</div>
+      <div class="kpi-value kpi-red">${totalErrors.toLocaleString()}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Active Agents</div>
+      <div class="kpi-value kpi-blue">${agents}</div></div>`;
+
+  // Trend by week/month grouped by module
+  const periods = [...new Set(records.map(r => r.week || r.month))].sort((a,b)=>a-b);
+  const modulesList = [...new Set(records.map(r => r.module))];
+  const datasets = modulesList.map((mod, i) => {
+    const pts = periods.map(p => {
+      const recs = records.filter(r => (r.week||r.month) === p && r.module === mod);
+      const s = recs.reduce((a,r)=>a+r.qaSample,0);
+      const ac = recs.reduce((a,r)=>a+r.accurate,0);
+      return s > 0 ? +(ac/s*100).toFixed(1) : null;
+    });
+    return { label: mod, data: pts, borderColor: MODULES_COLOR[mod]||COLORS[i], tension:.35, fill:false, pointRadius:3 };
+  });
+
+  makeChart('chartOverviewTrend', { type:'line', data: {
+    labels: periods.map(p => state.viewMode==='Weekly'?`W${p}`:`M${p}`), datasets },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}},
+      scales:{ y:{ min:80, max:100, ticks:{callback:v=>v+'%'} } } }
+  });
+
+  // Pie by module
+  const pieData = modulesList.map(mod => records.filter(r=>r.module===mod).reduce((a,r)=>a+r.qaSample,0));
+  makeChart('chartOverviewPie', { type:'doughnut', data:{
+    labels: modulesList, datasets:[{ data: pieData, backgroundColor: modulesList.map(m=>MODULES_COLOR[m]||'#888') }]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}} }
+  });
+
+  // Error bar by module
+  const errData = modulesList.map(mod => {
+    const recs = records.filter(r=>r.module===mod);
+    const s = recs.reduce((a,r)=>a+r.qaSample,0);
+    const ac = recs.reduce((a,r)=>a+r.accurate,0);
+    return s > 0 ? +((1-ac/s)*100).toFixed(1) : 0;
+  });
+  makeChart('chartOverviewErrors', { type:'bar', data:{
+    labels: modulesList, datasets:[{ label:'Error Rate %', data: errData, backgroundColor: modulesList.map(m=>MODULES_COLOR[m]+'CC'||'#888') }]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ y:{ ticks:{callback:v=>v+'%'} } } }
+  });
+}
+
+// ══════════════════════════════════════════
+// QA SCORE PAGE
+// ══════════════════════════════════════════
+function renderQAScore() {
+  const records = getFilteredRecords();
+  // Aggregate by agent
+  const byAgent = {};
+  records.forEach(r => {
+    const k = r.agentEmail + '||' + r.module + '||' + (r.subModule||'');
+    if (!byAgent[k]) byAgent[k] = { agentEmail:r.agentEmail, module:r.module, subModule:r.subModule||'', sample:0, accurate:0, errors:0, isProbation:r.isProbation };
+    byAgent[k].sample   += r.qaSample;
+    byAgent[k].accurate += r.accurate;
+    byAgent[k].errors   += r.errors;
+  });
+  const agents = Object.values(byAgent).map(a => ({
+    ...a, qaScore: a.sample>0 ? +(a.accurate/a.sample*100).toFixed(1) : 0
+  })).sort((a,b) => b.qaScore - a.qaScore);
+
+  const above = agents.filter(a => a.qaScore >= state.qaTarget).length;
+  const total = agents.length;
+  const totalSample = agents.reduce((s,a)=>s+a.sample,0);
+
+  document.getElementById('qaKPIs').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Agents ≥ Target</div>
+      <div class="kpi-value kpi-green">${above}</div><div class="kpi-sub">of ${total}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Agents Below Target</div>
+      <div class="kpi-value kpi-red">${total-above}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Total Sample</div>
+      <div class="kpi-value kpi-blue">${totalSample.toLocaleString()}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Pass Rate</div>
+      <div class="kpi-value ${above/total>=.8?'kpi-green':'kpi-red'}">${total>0?(above/total*100).toFixed(0):0}%</div></div>`;
+
+  // Trend chart
+  const periods = [...new Set(records.map(r=>r.week||r.month))].sort((a,b)=>a-b);
+  const trendData = periods.map(p => {
+    const recs = records.filter(r=>(r.week||r.month)===p);
+    const s = recs.reduce((a,r)=>a+r.qaSample,0);
+    const ac = recs.reduce((a,r)=>a+r.accurate,0);
+    return s>0 ? +(ac/s*100).toFixed(1) : null;
+  });
+  const labels = periods.map(p => state.viewMode==='Weekly'?`W${p}`:`M${p}`);
+  makeChart('chartQATrend', { type:'line', data:{
+    labels, datasets:[
+      { label:'QA Score', data:trendData, borderColor:'#2563EB', tension:.35, fill:false, pointRadius:4,
+        pointBackgroundColor: trendData.map(v => v>=state.qaTarget ? '#059669' : '#DC2626') },
+      { label:`Target ${state.qaTarget}%`, data:labels.map(()=>state.qaTarget), borderColor:'#DC2626', borderDash:[4,4], pointRadius:0, fill:false }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}},
+      scales:{ y:{ min:80, max:100, ticks:{callback:v=>v+'%'} } } }
+  });
+
+  // Table
+  document.getElementById('qaAgentCount').textContent = `${agents.length} agent-module combinations`;
+  const tbody = document.querySelector('#tableQA tbody');
+  tbody.innerHTML = agents.map((a,i) => `
+    <tr>
+      <td style="color:var(--text3)">${i+1}</td>
+      <td style="font-size:11px">${a.agentEmail.split('@')[0]}</td>
+      <td>${a.module}</td>
+      <td style="font-size:11px;color:var(--text3)">${a.subModule}</td>
+      <td style="font-weight:700;color:${getColor(a.qaScore,state.qaTarget)}">${a.qaScore}%</td>
+      <td>${a.sample.toLocaleString()}</td>
+      <td>${a.errors}</td>
+      <td>${a.isProbation ? '<span class="badge-warn">Y</span>' : '<span style="color:var(--text3)">N</span>'}</td>
+      <td>${a.qaScore>=state.qaTarget ? '<span class="badge-good">✓ On Track</span>' : '<span class="badge-bad">⚠ Below</span>'}</td>
+    </tr>`).join('');
+}
+
+// ══════════════════════════════════════════
+// APPEAL PAGE
+// ══════════════════════════════════════════
+function renderAppeal() {
+  if (!isAppealVisible()) return;
+  const records = getFilteredAppeal().filter(r =>
+    state.module === 'All' || r.module === state.module
+  );
+  const weekly = records.filter(r => r.week !== undefined);
+
+  const totalAppeals = records.reduce((a,r)=>a+r.total,0);
+  const totalSuccess = records.reduce((a,r)=>a+r.success,0);
+  const avgRate = totalAppeals>0 ? (totalSuccess/totalAppeals*100).toFixed(1) : 0;
+  const rateColor = avgRate <= state.appealTarget ? 'kpi-green' : 'kpi-red';
+
+  document.getElementById('appealKPIs').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Avg Appeal Rate</div>
+      <div class="kpi-value ${rateColor}">${avgRate}%</div>
+      <div class="kpi-sub">Target ≤ ${state.appealTarget}%</div></div>
+    <div class="kpi-card"><div class="kpi-label">Total Appeals</div>
+      <div class="kpi-value kpi-blue">${totalAppeals.toLocaleString()}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Success Appeals</div>
+      <div class="kpi-value kpi-green">${totalSuccess.toLocaleString()}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Records</div>
+      <div class="kpi-value kpi-blue">${records.length}</div></div>`;
+
+  // Group by week for trend
+  const byWeek = {};
+  weekly.forEach(r => {
+    if (!byWeek[r.week]) byWeek[r.week] = { total:0, success:0 };
+    byWeek[r.week].total   += r.total;
+    byWeek[r.week].success += r.success;
+  });
+  const wks = Object.keys(byWeek).map(Number).sort((a,b)=>a-b);
+  const rates = wks.map(w => byWeek[w].total>0 ? +(byWeek[w].success/byWeek[w].total*100).toFixed(1) : 0);
+
+  makeChart('chartAppealTrend', { type:'line', data:{
+    labels: wks.map(w=>`W${w}`),
+    datasets:[
+      { label:'Appeal Rate %', data:rates, borderColor:'#D97706', tension:.35, fill:false, pointRadius:4,
+        pointBackgroundColor: rates.map(v => v<=state.appealTarget ? '#059669':'#DC2626') },
+      { label:`Target ≤${state.appealTarget}%`, data:wks.map(()=>state.appealTarget), borderColor:'#DC2626', borderDash:[4,4], pointRadius:0, fill:false }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}},
+      scales:{ y:{ min:0, ticks:{callback:v=>v+'%'} } } }
+  });
+
+  const tbody = document.querySelector('#tableAppeal tbody');
+  tbody.innerHTML = records.map(r => {
+    const period = r.week ? `W${r.week}` : `M${r.month}`;
+    const good = r.rate <= state.appealTarget;
+    return `<tr>
+      <td>${period}</td><td>${r.module}</td><td style="font-size:11px">${r.type}</td>
+      <td>${r.total}</td><td>${r.success}</td>
+      <td style="font-weight:700;color:${good?'var(--green)':'var(--red)'}">${r.rate}%</td>
+      <td>${good ? '<span class="badge-good">✓ OK</span>' : '<span class="badge-bad">⚠ High</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+// LEAKAGE PAGE
+// ══════════════════════════════════════════
+function renderLeakage() {
+  const records = getFilteredLeakage();
+  const leakage  = records.filter(r=>r.type==='Leakage');
+  const overkill = records.filter(r=>r.type==='Overkill');
+
+  const avgLeak = leakage.length  ? (leakage.reduce((a,r)=>a+r.rate,0)/leakage.length).toFixed(1) : 0;
+  const avgOver = overkill.length ? (overkill.reduce((a,r)=>a+r.rate,0)/overkill.length).toFixed(1) : 0;
+
+  document.getElementById('leakageKPIs').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Avg Leakage Rate</div>
+      <div class="kpi-value kpi-red">${avgLeak}%</div></div>
+    <div class="kpi-card"><div class="kpi-label">Avg Overkill Rate</div>
+      <div class="kpi-value kpi-orange">${avgOver}%</div></div>
+    <div class="kpi-card"><div class="kpi-label">Leakage Records</div>
+      <div class="kpi-value kpi-blue">${leakage.length}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Overkill Records</div>
+      <div class="kpi-value kpi-blue">${overkill.length}</div></div>`;
+
+  // Group by module for trends
+  const modules = [...new Set(records.map(r=>r.module))];
+  const periods = [...new Set(records.map(r=>r.periodNum))].sort((a,b)=>a-b);
+  const pfx = state.viewMode==='Weekly' ? 'W' : 'M';
+
+  const mkDatasets = (subset) => modules.map((mod, i) => ({
+    label: mod, fill:false, tension:.35,
+    borderColor: MODULES_COLOR[mod]||COLORS[i],
+    data: periods.map(p => {
+      const r = subset.find(x=>x.module===mod && x.periodNum===p);
+      return r ? r.rate : null;
+    })
+  }));
+
+  makeChart('chartLeakage', { type:'line', data:{
+    labels: periods.map(p=>`${pfx}${p}`), datasets: mkDatasets(leakage)},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}},
+      scales:{ y:{ min:0, ticks:{callback:v=>v+'%'} } } }
+  });
+  makeChart('chartOverkill', { type:'line', data:{
+    labels: periods.map(p=>`${pfx}${p}`), datasets: mkDatasets(overkill)},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}},
+      scales:{ y:{ min:0, ticks:{callback:v=>v+'%'} } } }
+  });
+}
+
+// ══════════════════════════════════════════
+// AGENT PERFORMANCE PAGE
+// ══════════════════════════════════════════
+function renderAgentPerf() {
+  const records = getFilteredRecords();
+  const byAgent = {};
+  records.forEach(r => {
+    if (!byAgent[r.agentEmail]) byAgent[r.agentEmail] = { agentEmail:r.agentEmail, module:r.module, sample:0, accurate:0, errors:0, isProbation:false };
+    byAgent[r.agentEmail].sample   += r.qaSample;
+    byAgent[r.agentEmail].accurate += r.accurate;
+    byAgent[r.agentEmail].errors   += r.errors;
+    if (r.isProbation) byAgent[r.agentEmail].isProbation = true;
+  });
+  const agents = Object.values(byAgent).map(a => ({
+    ...a, qaScore: a.sample>0 ? +(a.accurate/a.sample*100).toFixed(1) : 0
+  })).sort((a,b)=>b.qaScore-a.qaScore);
+
+  const above = agents.filter(a=>a.qaScore>=state.qaTarget).length;
+  document.getElementById('agentKPIs').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Total Agents</div><div class="kpi-value kpi-blue">${agents.length}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Above Target</div><div class="kpi-value kpi-green">${above}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Below Target</div><div class="kpi-value kpi-red">${agents.length-above}</div></div>
+    <div class="kpi-card"><div class="kpi-label">On Probation</div><div class="kpi-value kpi-orange">${agents.filter(a=>a.isProbation).length}</div></div>`;
+
+  // Ranking table
+  document.getElementById('agentRankCount').textContent = `${agents.length} agents`;
+  document.querySelector('#tableAgentRank tbody').innerHTML = agents.map((a,i) => `
+    <tr>
+      <td style="color:var(--text3);font-weight:700">${i<3?['🥇','🥈','🥉'][i]:i+1}</td>
+      <td style="font-size:11px">${a.agentEmail.split('@')[0]}</td>
+      <td>${a.module}</td>
+      <td style="font-weight:800;color:${getColor(a.qaScore,state.qaTarget)}">${a.qaScore}%</td>
+      <td>${a.sample.toLocaleString()}</td>
+      <td>${a.errors}</td>
+      <td>${a.qaScore>=state.qaTarget?'<span class="badge-good">✓ On Track</span>':'<span class="badge-bad">⚠ Below</span>'}</td>
+    </tr>`).join('');
+
+  // Distribution histogram
+  const bins = ['<90','90-92','92-94','94-96','96-98','98-100'];
+  const counts = [
+    agents.filter(a=>a.qaScore<90).length,
+    agents.filter(a=>a.qaScore>=90&&a.qaScore<92).length,
+    agents.filter(a=>a.qaScore>=92&&a.qaScore<94).length,
+    agents.filter(a=>a.qaScore>=94&&a.qaScore<96).length,
+    agents.filter(a=>a.qaScore>=96&&a.qaScore<98).length,
+    agents.filter(a=>a.qaScore>=98).length,
+  ];
+  makeChart('chartDistribution', { type:'bar', data:{
+    labels: bins, datasets:[{ label:'Agents', data:counts,
+      backgroundColor: ['#FEE2E2','#FECACA','#FEF3C7','#D1FAE5','#A7F3D0','#6EE7B7'] }]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ y:{ ticks:{stepSize:1} } } }
+  });
+
+  // Probation table
+  const probAgents = agents.filter(a=>a.isProbation);
+  document.getElementById('probationCount').textContent = `${probAgents.length} agents on probation`;
+  document.querySelector('#tableProbation tbody').innerHTML = probAgents.map((a,i) => `
+    <tr>
+      <td>${i+1}</td>
+      <td style="font-size:11px">${a.agentEmail.split('@')[0]}</td>
+      <td>${a.module}</td>
+      <td style="font-weight:700;color:${getColor(a.qaScore,state.qaTarget)}">${a.qaScore}%</td>
+      <td>${a.sample.toLocaleString()}</td>
+      <td>${state.data?.probation?.find(p=>p.agentEmail===a.agentEmail)?.weeks?.join(', ')||'—'}</td>
+      <td>${a.qaScore>=state.qaTarget?'<span class="badge-good">Improving</span>':'<span class="badge-bad">Needs Coaching</span>'}</td>
+    </tr>`).join('');
+}
+
+// ══════════════════════════════════════════
+// NAVIGATION & FILTER BINDING
+// ══════════════════════════════════════════
+function bindNav() {
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.addEventListener('click', () => switchPage(el.dataset.page));
+  });
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+}
+
+function switchPage(page) {
+  if (page === 'appeal' && !isAppealVisible()) return;
+  state.activePage = page;
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.page === page);
+  });
+  document.querySelectorAll('.page').forEach(el => {
+    el.classList.toggle('active', el.id === `page-${page}`);
+  });
+  render();
+}
+
+function switchTab(tab) {
+  if (tab === 'probation' && state.viewMode === 'Monthly') return;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab===tab));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id===`tab-${tab}`));
+}
+
+function bindFilters() {
+  document.querySelectorAll('.pill').forEach(p => {
+    p.addEventListener('click', () => {
+      document.querySelectorAll('.pill').forEach(x => x.classList.remove('active'));
+      p.classList.add('active');
+      state.module = p.dataset.module;
+      render();
+    });
+  });
+  document.querySelectorAll('.view-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.view-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      state.viewMode = b.dataset.view;
+      render();
+    });
+  });
+  document.getElementById('qaTarget').addEventListener('change', e => {
+    state.qaTarget = +e.target.value; render();
+  });
+  document.getElementById('appealTarget').addEventListener('change', e => {
+    state.appealTarget = +e.target.value; render();
+  });
+}
+</script>
+</body>
+</html>
