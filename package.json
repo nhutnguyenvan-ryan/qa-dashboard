@@ -1,0 +1,17 @@
+{
+  "name": "qa-dashboard",
+  "version": "1.0.0",
+  "description": "QA Monitoring Dashboard - Shopee VN",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "csv-parse": "^5.5.3",
+    "iconv-lite": "^0.6.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
